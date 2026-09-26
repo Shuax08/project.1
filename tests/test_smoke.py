@@ -1,4 +1,5 @@
 import pytest
+import json, hmac, hashlib
 from app import create_app
 from app.models import db, Shop, User, Customer, MenuItem, Order
 @pytest.fixture
@@ -51,3 +52,40 @@ def test_webhook_requires_real_verification(app):
     client=app.test_client()
     assert client.get('/webhooks/whatsapp?hub.verify_token=&hub.challenge=abc').status_code==403
     assert client.post('/webhooks/whatsapp',json={'shop_id':1,'from':'123'}).status_code==401
+
+def test_whatsapp_customer_order_and_retry(app, monkeypatch):
+    from app.models import WhatsAppChannel, IncomingMessage, CreditAccount
+    from app.routes import webhooks as webhook_module
+    app.config['WHATSAPP_APP_SECRET']='test-secret'
+    app.config['WHATSAPP_VERIFY_TOKEN']='verify-secret'
+    sent=[]
+    monkeypatch.setattr(webhook_module,'send_text',lambda phone_id,to,body: sent.append((phone_id,to,body)))
+    with app.app_context():
+        a,b=Shop(name='One',slug='one'),Shop(name='Two',slug='two')
+        db.session.add_all([a,b]);db.session.flush()
+        db.session.add_all([WhatsAppChannel(shop_id=a.id,phone_number_id='111',display_number='971500000001'),WhatsAppChannel(shop_id=b.id,phone_number_id='222',display_number='971500000002'),MenuItem(shop_id=a.id,name='Biriyani',price='15.00'),MenuItem(shop_id=b.id,name='Other',price='0.01')]);db.session.commit()
+        item=MenuItem.query.filter_by(shop_id=a.id).first().id
+    client=app.test_client()
+    assert client.get('/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=verify-secret&hub.challenge=abc').data==b'abc'
+    counter=0
+    def send(body,phone_id='111',sender='971511112222',kind='text'):
+        nonlocal counter
+        counter+=1
+        payload={'object':'whatsapp_business_account','entry':[{'changes':[{'field':'messages','value':{'metadata':{'phone_number_id':phone_id},'messages':[{'id':f'wamid.{counter}','from':sender,'type':kind,kind:{'body':body} if kind=='text' else body}]}}]}]}
+        raw=json.dumps(payload).encode()
+        signature='sha256='+hmac.new(b'test-secret',raw,hashlib.sha256).hexdigest()
+        return client.post('/webhooks/whatsapp',data=raw,headers={'X-Hub-Signature-256':signature,'Content-Type':'application/json'}),raw,signature
+    assert send('MENU')[0].status_code==200
+    assert 'Biriyani' in sent[-1][2] and 'Other' not in sent[-1][2]
+    assert send(f'ADD {item} 2')[0].status_code==200
+    assert send('NAME Test Customer')[0].status_code==200
+    response,raw,signature=send('CONFIRM CASH')
+    assert response.status_code==200 and 'AED 30.00' in sent[-1][2]
+    assert client.post('/webhooks/whatsapp',data=raw,headers={'X-Hub-Signature-256':signature,'Content-Type':'application/json'}).status_code==200
+    with app.app_context():
+        assert Order.query.count()==1
+        assert Order.query.first().total==30
+        assert IncomingMessage.query.count()==4
+    assert len(sent)==4
+    assert send('MENU',phone_id='222')[0].status_code==200
+    assert 'Biriyani' not in sent[-1][2]

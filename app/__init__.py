@@ -58,6 +58,38 @@ def create_app(config_object=None):
         owner.set_password(password)
         db.session.add(owner); db.session.commit()
         click.echo(f'Created shop {slug} and owner {email}')
+    @app.cli.command('configure-whatsapp')
+    @click.option('--slug',required=True)
+    @click.option('--phone-number-id',required=True)
+    @click.option('--display-number',required=True)
+    def configure_whatsapp(slug,phone_number_id,display_number):
+        from .models import Shop, WhatsAppChannel
+        shop=Shop.query.filter_by(slug=slug).first()
+        if not shop: raise click.ClickException('Shop not found')
+        duplicate=WhatsAppChannel.query.filter_by(phone_number_id=phone_number_id).first()
+        if duplicate and duplicate.shop_id!=shop.id: raise click.ClickException('Phone number ID already belongs to another shop')
+        channel=WhatsAppChannel.query.filter_by(shop_id=shop.id).first()
+        if not channel: channel=WhatsAppChannel(shop_id=shop.id)
+        channel.phone_number_id=phone_number_id
+        channel.display_number=display_number
+        shop.phone=display_number
+        db.session.add(channel); db.session.commit()
+        click.echo(f'WhatsApp configured for {slug}')
+    @app.cli.command('add-menu-item')
+    @click.option('--slug',required=True)
+    @click.option('--name',required=True)
+    @click.option('--price',required=True)
+    def add_menu_item(slug,name,price):
+        from decimal import Decimal, InvalidOperation
+        from .models import Shop, MenuItem
+        shop=Shop.query.filter_by(slug=slug).first()
+        if not shop: raise click.ClickException('Shop not found')
+        try: amount=Decimal(price).quantize(Decimal('0.01'))
+        except InvalidOperation: raise click.ClickException('Invalid price')
+        if not amount.is_finite() or amount<0: raise click.ClickException('Invalid price')
+        item=MenuItem(shop_id=shop.id,name=name,price=amount)
+        db.session.add(item); db.session.commit()
+        click.echo(f'Added item #{item.id}: {name} AED {amount:.2f}')
     @app.get('/health')
     def health():
         return jsonify({'status': 'ok', 'service': 'thalasseri'})

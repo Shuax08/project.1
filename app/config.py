@@ -11,4 +11,6 @@ class Config:
     PUBLIC_BASE_URL = os.getenv('PUBLIC_BASE_URL', 'http://localhost:8000').rstrip('/')
     WHATSAPP_VERIFY_TOKEN = os.getenv('WHATSAPP_VERIFY_TOKEN', '')
     WHATSAPP_APP_SECRET = os.getenv('WHATSAPP_APP_SECRET', '')
+    WHATSAPP_ACCESS_TOKEN = os.getenv('WHATSAPP_ACCESS_TOKEN', '')
+    WHATSAPP_GRAPH_VERSION = os.getenv('WHATSAPP_GRAPH_VERSION', 'v23.0')
     RATE_LIMIT_PER_MINUTE = int(os.getenv('RATE_LIMIT_PER_MINUTE', '120'))

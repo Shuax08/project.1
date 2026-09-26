@@ -37,3 +37,18 @@ class Subscription(db.Model):
     id=db.Column(db.Integer, primary_key=True); shop_id=db.Column(db.Integer, db.ForeignKey('shop.id'), unique=True); plan_id=db.Column(db.Integer, db.ForeignKey('plan.id')); status=db.Column(db.String(20), default='trial'); renews_at=db.Column(db.DateTime(timezone=True))
 class BotSession(db.Model):
     id=db.Column(db.Integer, primary_key=True); shop_id=db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False); phone=db.Column(db.String(40), nullable=False); state=db.Column(db.String(40), default='start'); data=db.Column(db.JSON, default=dict); updated_at=db.Column(db.DateTime(timezone=True), default=utcnow); __table_args__=(db.UniqueConstraint('shop_id','phone'),)
+
+class WhatsAppChannel(db.Model):
+    id=db.Column(db.Integer, primary_key=True)
+    shop_id=db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False, unique=True, index=True)
+    phone_number_id=db.Column(db.String(80), nullable=False, unique=True, index=True)
+    display_number=db.Column(db.String(40), nullable=False)
+
+class IncomingMessage(db.Model):
+    id=db.Column(db.Integer, primary_key=True)
+    shop_id=db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False, index=True)
+    message_id=db.Column(db.String(200), nullable=False, unique=True)
+    recipient=db.Column(db.String(40), nullable=False)
+    response=db.Column(db.Text)
+    sent=db.Column(db.Boolean, nullable=False, default=False)
+    created_at=db.Column(db.DateTime(timezone=True), default=utcnow)
