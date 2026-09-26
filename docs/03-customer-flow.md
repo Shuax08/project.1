@@ -1,0 +1,1 @@
+A customer scans `/s/<shop-slug>`, opens WhatsApp, selects menu items, provides details/location, passes server-side safe-zone verification, chooses payment or credit, and receives a status and receipt.

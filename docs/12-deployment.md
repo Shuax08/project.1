@@ -1,0 +1,1 @@
+Production topology: HTTPS reverse proxy → Gunicorn → Flask → PostgreSQL. Set SECRET_KEY, DATABASE_URL, PUBLIC_BASE_URL, secure cookies, webhook secret, and provider credentials. Run migrations before deployment and back up before migrations.

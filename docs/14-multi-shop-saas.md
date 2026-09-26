@@ -1,0 +1,1 @@
+Every tenant-owned row carries shop_id and authenticated users derive it from session state. Platform administration is separate. Subscription billing is separate from customer order payments; data is retained when a subscription expires.

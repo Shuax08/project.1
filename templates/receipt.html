@@ -1,0 +1,1 @@
+<!doctype html><html><body><h1>{{ data.branding }}</h1><p>{{ data.shop }} · Order #{{ data.order_number }}</p>{% for item in data.items %}<div>{{ item.quantity }} × {{ item.name }} — {{ item.line_total }}</div>{% endfor %}<h2>Total: {{ data.total }}</h2><p>{{ data.payment_status }} · {{ data.order_status }}</p></body></html>

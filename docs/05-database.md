@@ -1,0 +1,1 @@
+Core tables are shops, users, customers, menu_items, orders, order_items, credit_accounts, credit_transactions, payments, printer_settings, audit_logs, plans, subscriptions, and bot_sessions. Order items retain historical name, price, quantity, and line total.

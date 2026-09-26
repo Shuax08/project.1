@@ -1,0 +1,1 @@
+Passwords use Werkzeug hashes; tenant queries include shop_id; cookies are HttpOnly/SameSite; security headers and HMAC webhook verification are installed; errors are sanitized; secrets are environment variables. Production rate limiting should use Redis or provider controls.

@@ -1,0 +1,1 @@
+Implemented endpoints include `/health`, `/s/<slug>`, `/s/<slug>/whatsapp`, `/api/auth/login`, `/api/auth/logout`, `/api/shops`, `/api/shops/me`, `/api/menu`, `/api/orders`, `/api/orders/<id>`, receipt endpoints, printer settings, `/api/reports`, and `/webhooks/whatsapp`.

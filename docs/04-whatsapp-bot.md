@@ -1,0 +1,1 @@
+Webhook verification is GET token verification plus POST HMAC verification. Bot sessions are tenant-scoped and stateful. AI providers, when configured, must emit structured intents; prices and actions are always validated by the backend.

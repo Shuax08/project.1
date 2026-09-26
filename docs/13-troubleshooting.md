@@ -1,0 +1,1 @@
+Startup failures usually indicate missing dependencies or environment configuration. Database failures indicate an invalid DATABASE_URL. Webhook failures indicate token/signature mismatch. Printer failures should use the null driver and be retried separately from order transactions.

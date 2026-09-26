@@ -1,0 +1,1 @@
+Before launch: set production secrets; configure PostgreSQL, HTTPS, backups, migrations, webhook verification, WhatsApp app, payment provider, optional AI provider, monitoring, rate limiting, printer agent, and tenant-isolation tests.
