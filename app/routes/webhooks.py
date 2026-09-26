@@ -9,12 +9,12 @@ def valid_signature(raw):
     return hmac.compare_digest(hmac.new(secret.encode(),raw,hashlib.sha256).hexdigest(),supplied)
 @webhooks.get('/whatsapp')
 def verify():
-    if request.args.get('hub.verify_token')==current_app.config['WHATSAPP_VERIFY_TOKEN']: return request.args.get('hub.challenge','')
+    token=current_app.config.get('WHATSAPP_VERIFY_TOKEN','')
+    if token and request.args.get('hub.mode')=='subscribe' and hmac.compare_digest(request.args.get('hub.verify_token',''),token): return request.args.get('hub.challenge','')
     return jsonify(error='verification failed'),403
 @webhooks.post('/whatsapp')
 def receive():
     if not valid_signature(request.get_data()): return jsonify(error='invalid signature'),401
-    payload=request.get_json(silent=True) or {}; shop=Shop.query.filter_by(id=payload.get('shop_id')).first()
-    if not shop:return jsonify(error='ignored'),200
-    phone=str(payload.get('from','')); s=BotSession.query.filter_by(shop_id=shop.id,phone=phone).first() or BotSession(shop_id=shop.id,phone=phone)
-    s.state='received'; db.session.add(s); db.session.commit(); return jsonify(ok=True)
+    # Meta webhook payloads do not contain a trusted shop_id. Resolve the tenant
+    # from a configured phone number ID before processing any customer action.
+    return jsonify(error='WhatsApp phone number mapping is not configured'),503
