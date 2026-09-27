@@ -1,11 +1,11 @@
 from functools import wraps
 from flask import session, jsonify
-from app.models import User
+from app.models import User, db
 
 def login_required(fn):
     @wraps(fn)
     def wrapper(*a,**kw):
-        user=User.query.get(session.get('user_id')) if session.get('user_id') else None
+        user=db.session.get(User,session.get('user_id')) if session.get('user_id') else None
         if not user or not user.active: return jsonify(error='authentication required'),401
         return fn(user,*a,**kw)
     return wrapper

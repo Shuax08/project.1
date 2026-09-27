@@ -20,7 +20,7 @@ class MenuItem(db.Model):
 class Order(db.Model):
     id=db.Column(db.Integer, primary_key=True); shop_id=db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False, index=True); customer_id=db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False); status=db.Column(db.String(20), default='Pending', index=True); payment_status=db.Column(db.String(20), default='UNPAID'); payment_method=db.Column(db.String(30)); subtotal=db.Column(db.Numeric(12,2), nullable=False, default=0); total=db.Column(db.Numeric(12,2), nullable=False, default=0); idempotency_key=db.Column(db.String(120)); created_at=db.Column(db.DateTime(timezone=True), default=utcnow); __table_args__=(db.UniqueConstraint('shop_id','idempotency_key'),)
 class OrderItem(db.Model):
-    id=db.Column(db.Integer, primary_key=True); order_id=db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False, index=True); menu_item_id=db.Column(db.Integer); item_name=db.Column(db.String(160), nullable=False); unit_price=db.Column(db.Numeric(12,2), nullable=False); quantity=db.Column(db.Integer, nullable=False); line_total=db.Column(db.Numeric(12,2), nullable=False)
+    id=db.Column(db.Integer, primary_key=True); order_id=db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False, index=True); order=db.relationship('Order', backref='items'); menu_item_id=db.Column(db.Integer); item_name=db.Column(db.String(160), nullable=False); unit_price=db.Column(db.Numeric(12,2), nullable=False); quantity=db.Column(db.Integer, nullable=False); line_total=db.Column(db.Numeric(12,2), nullable=False)
 class CreditAccount(db.Model):
     id=db.Column(db.Integer, primary_key=True); shop_id=db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False); customer_id=db.Column(db.Integer, db.ForeignKey('customer.id'), nullable=False, unique=True); credit_enabled=db.Column(db.Boolean, default=False); credit_limit=db.Column(db.Numeric(12,2), default=500); outstanding_balance=db.Column(db.Numeric(12,2), default=0)
 class CreditTransaction(db.Model):
@@ -37,3 +37,27 @@ class Subscription(db.Model):
     id=db.Column(db.Integer, primary_key=True); shop_id=db.Column(db.Integer, db.ForeignKey('shop.id'), unique=True); plan_id=db.Column(db.Integer, db.ForeignKey('plan.id')); status=db.Column(db.String(20), default='trial'); renews_at=db.Column(db.DateTime(timezone=True))
 class BotSession(db.Model):
     id=db.Column(db.Integer, primary_key=True); shop_id=db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False); phone=db.Column(db.String(40), nullable=False); state=db.Column(db.String(40), default='start'); data=db.Column(db.JSON, default=dict); updated_at=db.Column(db.DateTime(timezone=True), default=utcnow); __table_args__=(db.UniqueConstraint('shop_id','phone'),)
+
+class WhatsAppChannel(db.Model):
+    id=db.Column(db.Integer, primary_key=True)
+    shop_id=db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False, unique=True, index=True)
+    phone_number_id=db.Column(db.String(80), nullable=False, unique=True, index=True)
+    display_number=db.Column(db.String(40), nullable=False)
+
+class IncomingMessage(db.Model):
+    id=db.Column(db.Integer, primary_key=True)
+    shop_id=db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False, index=True)
+    message_id=db.Column(db.String(200), nullable=False, unique=True)
+    recipient=db.Column(db.String(40), nullable=False)
+    response=db.Column(db.Text)
+    sent=db.Column(db.Boolean, nullable=False, default=False)
+    order_id=db.Column(db.Integer, db.ForeignKey('order.id'))
+    owner_notified=db.Column(db.Boolean, nullable=False, default=False)
+    created_at=db.Column(db.DateTime(timezone=True), default=utcnow)
+
+class OwnerWhatsAppIdentity(db.Model):
+    id=db.Column(db.Integer, primary_key=True)
+    shop_id=db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False, index=True)
+    user_id=db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    phone=db.Column(db.String(40), nullable=False)
+    __table_args__=(db.UniqueConstraint('shop_id','phone'),db.UniqueConstraint('shop_id','user_id'))
