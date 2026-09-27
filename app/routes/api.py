@@ -6,6 +6,7 @@ from app.models import db, Shop, User, Customer, MenuItem, Order, OrderItem, Cre
 from app.auth.decorators import login_required, roles
 from app.services.geo import safe_zone
 from app.services.receipt_service import build_receipt_data, render_receipt_text, render_receipt_html
+from app.services.order_service import cancel_order
 api=Blueprint('api',__name__)
 
 def money(v):
@@ -150,7 +151,11 @@ def get_order(user,order_id):
 def update_order(user,order_id):
     o=Order.query.filter_by(id=order_id,shop_id=user.shop_id).first_or_404(); d=request.get_json() or {}
     if 'status' in d and d['status'] not in ('Pending','Confirmed','Preparing','Ready','Delivered','Cancelled'): return jsonify(error='invalid status'),400
-    if 'status' in d: o.status=d['status']
+    if 'status' in d:
+        if d['status']=='Cancelled':
+            try: cancel_order(o)
+            except ValueError as exc: return jsonify(error=str(exc)),400
+        else: o.status=d['status']
     if 'payment_status' in d: return jsonify(error='payment status requires a verified payment or ledger transaction'),400
     db.session.commit(); return jsonify(order=order_json(o))
 @api.get('/orders/<int:order_id>/receipt')

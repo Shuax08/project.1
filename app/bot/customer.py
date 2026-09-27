@@ -22,7 +22,7 @@ def _cart_text(shop_id, cart):
             'For enabled credit, send CONFIRM CREDIT.')
 
 
-def handle_customer(shop, phone, message):
+def handle_customer(shop, phone, message, on_order=None):
     """Process one verified message within the caller's database transaction."""
     session = BotSession.query.filter_by(shop_id=shop.id, phone=phone).first()
     if session is None:
@@ -118,6 +118,8 @@ def handle_customer(shop, phone, message):
                                          unit_price=item.price, quantity=quantity, line_total=item.price * quantity))
         db.session.add(order)
         db.session.flush()
+        if on_order:
+            on_order(order.id)
         if account:
             account.outstanding_balance = Decimal(account.outstanding_balance or 0) + total
             db.session.add(CreditTransaction(account_id=account.id, kind='charge', amount=total, order_id=order.id))

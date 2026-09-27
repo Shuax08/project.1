@@ -51,4 +51,13 @@ class IncomingMessage(db.Model):
     recipient=db.Column(db.String(40), nullable=False)
     response=db.Column(db.Text)
     sent=db.Column(db.Boolean, nullable=False, default=False)
+    order_id=db.Column(db.Integer, db.ForeignKey('order.id'))
+    owner_notified=db.Column(db.Boolean, nullable=False, default=False)
     created_at=db.Column(db.DateTime(timezone=True), default=utcnow)
+
+class OwnerWhatsAppIdentity(db.Model):
+    id=db.Column(db.Integer, primary_key=True)
+    shop_id=db.Column(db.Integer, db.ForeignKey('shop.id'), nullable=False, index=True)
+    user_id=db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    phone=db.Column(db.String(40), nullable=False)
+    __table_args__=(db.UniqueConstraint('shop_id','phone'),db.UniqueConstraint('shop_id','user_id'))

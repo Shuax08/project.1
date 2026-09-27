@@ -4,7 +4,13 @@ This build processes Meta Cloud API `messages` webhooks. POST requires a valid `
 
 Commands: `START`, `MENU`, `ADD <item-number> <quantity>`, `CART`, `REMOVE <item-number>`, `CLEAR`, `NAME <name>`, `CONFIRM CASH`, `CONFIRM CREDIT` (requires enabled credit), `STATUS`, `HELP`. WhatsApp shared location is supported for shops with a safe zone. Prices come from the database at order confirmation. CASH remains unpaid until collected; CREDIT creates a ledger entry.
 
-Natural text such as “2 chicken biriyani”, an owner bot, a payment gateway, and automated owner notification are not implemented. Order status can be changed through the authenticated owner API.
+Natural text such as “2 chicken biriyani” and a payment gateway are not implemented. A new order sends a notification to the first linked active owner or manager number. If delivery fails, the webhook requests a retry without creating another order. Order status can be changed through the authenticated owner API or the linked owner's WhatsApp number; status change notifications to customers are not implemented.
+
+## Owner commands
+
+After verifying the owner's number independently, link it with `flask --app server link-owner-whatsapp --slug demo --email owner@example.com --phone 9715XXXXXXXX`. The number must use international digits without `+`. This server-side link is the authorization step; a message body cannot claim owner access. Owner commands: `PENDING`, `ORDER <id>`, `ACCEPT <id>`, `REJECT <id>`, `PREPARING <id>`, `READY <id>`, `DELIVERED <id>`, `SALES`, `HELP`. Status transitions are checked and audited; cross-shop orders are hidden.
+
+To try both bots without Meta credentials, run `flask --app server simulate-whatsapp --slug demo --from-phone 9715XXXXXXXX --message MENU` after adding a menu item. Use an unlinked number for customer commands and the linked number for owner commands. Run one command at a time; state is stored in the configured database. This local command does not send real WhatsApp messages or owner notifications.
 
 ## Live test
 

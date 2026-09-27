@@ -90,6 +90,44 @@ def create_app(config_object=None):
         item=MenuItem(shop_id=shop.id,name=name,price=amount)
         db.session.add(item); db.session.commit()
         click.echo(f'Added item #{item.id}: {name} AED {amount:.2f}')
+    @app.cli.command('link-owner-whatsapp')
+    @click.option('--slug',required=True)
+    @click.option('--email',required=True)
+    @click.option('--phone',required=True)
+    def link_owner_whatsapp(slug,email,phone):
+        from .models import Shop, User, OwnerWhatsAppIdentity
+        shop=Shop.query.filter_by(slug=slug).first()
+        if not shop: raise click.ClickException('Shop not found')
+        user=User.query.filter_by(shop_id=shop.id,email=email,active=True).first()
+        if not user or user.role not in ('SHOP_OWNER','SHOP_MANAGER'): raise click.ClickException('Owner or manager not found')
+        if not phone.isdigit() or len(phone)>40: raise click.ClickException('Use international digits without +')
+        other=OwnerWhatsAppIdentity.query.filter_by(shop_id=shop.id,phone=phone).first()
+        if other and other.user_id!=user.id: raise click.ClickException('Phone already linked to another user')
+        identity=OwnerWhatsAppIdentity.query.filter_by(shop_id=shop.id,user_id=user.id).first()
+        if not identity: identity=OwnerWhatsAppIdentity(shop_id=shop.id,user_id=user.id)
+        identity.phone=phone
+        db.session.add(identity); db.session.commit()
+        click.echo(f'Linked {email} to WhatsApp for {slug}')
+    @app.cli.command('simulate-whatsapp')
+    @click.option('--slug',required=True)
+    @click.option('--from-phone',required=True)
+    @click.option('--message',required=True)
+    def simulate_whatsapp(slug,from_phone,message):
+        """Run the real conversation handler locally without sending to Meta."""
+        from .models import Shop, User, OwnerWhatsAppIdentity
+        from .bot.owner import handle_owner
+        from .bot.customer import handle_customer
+        shop=Shop.query.filter_by(slug=slug,status='active').first()
+        if not shop: raise click.ClickException('Active shop not found')
+        identity=OwnerWhatsAppIdentity.query.filter_by(shop_id=shop.id,phone=from_phone).first()
+        payload={'type':'text','text':{'body':message}}
+        if identity:
+            owner=db.session.get(User,identity.user_id)
+            reply=handle_owner(shop,owner,payload) if owner else 'Owner access denied.'
+        else:
+            reply=handle_customer(shop,from_phone,payload)
+        db.session.commit()
+        click.echo(reply)
     @app.get('/health')
     def health():
         return jsonify({'status': 'ok', 'service': 'thalasseri'})

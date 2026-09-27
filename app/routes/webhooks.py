@@ -1,8 +1,9 @@
 import hashlib
 import hmac
 from flask import Blueprint, request, jsonify, current_app
-from app.models import db, WhatsAppChannel, IncomingMessage, Shop
+from app.models import db, WhatsAppChannel, IncomingMessage, OwnerWhatsAppIdentity, Shop, User, Order
 from app.bot.customer import handle_customer
+from app.bot.owner import handle_owner
 from app.services.whatsapp_service import send_text, WhatsAppDeliveryError
 
 webhooks = Blueprint('webhooks', __name__)
@@ -57,7 +58,10 @@ def receive():
                     record = IncomingMessage(shop_id=shop.id, message_id=message_id, recipient=sender)
                     db.session.add(record)
                     try:
-                        record.response = handle_customer(shop, sender, message)
+                        identity = OwnerWhatsAppIdentity.query.filter_by(shop_id=shop.id,phone=sender).first()
+                        owner = db.session.get(User, identity.user_id) if identity else None
+                        record.response = ((handle_owner(shop, owner, message) if owner else 'Owner access denied.') if identity
+                                           else handle_customer(shop, sender, message, on_order=lambda order_id: setattr(record,'order_id',order_id)))
                         db.session.commit()
                     except Exception:
                         db.session.rollback()
@@ -69,5 +73,19 @@ def receive():
                         current_app.logger.warning('WhatsApp delivery failed for message id %s', message_id)
                         return jsonify(error='message delivery unavailable'), 503
                     record.sent = True
+                    db.session.commit()
+                if record.order_id and not record.owner_notified:
+                    owner_identity = OwnerWhatsAppIdentity.query.filter_by(shop_id=shop.id).order_by(OwnerWhatsAppIdentity.id).first()
+                    if owner_identity:
+                        linked_user = db.session.get(User, owner_identity.user_id)
+                        if linked_user and linked_user.active and linked_user.role in ('SHOP_OWNER','SHOP_MANAGER'):
+                            order = Order.query.filter_by(id=record.order_id,shop_id=shop.id).first()
+                            try:
+                                send_text(channel.phone_number_id,owner_identity.phone,
+                                          f'New order #{order.id}: AED {order.total:.2f}. Send ORDER {order.id} or ACCEPT {order.id}.')
+                            except WhatsAppDeliveryError:
+                                current_app.logger.warning('Owner notification failed for message id %s',message_id)
+                                return jsonify(error='owner notification unavailable'),503
+                    record.owner_notified=True
                     db.session.commit()
     return jsonify(ok=True)
